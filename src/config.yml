@@ -1,0 +1,9 @@
+load:
+  train_path: './src/dataset/train/'
+  test_path: './src/dataset/test/'
+  extra_path: './src/dataset/extra/'
+  events: ['Additional', 'Bridge', 'Event', 'Holiday', 'Transfer', 'Work Day']
+  locale: ['Local', 'National', 'Regional']
+  city: ['Ambato', 'Cayambe', 'Cotopaxi', 'Cuenca', 'Ecuador', 'El Carmen', 'Esmeraldas', 'Guaranda', 'Guayaquil', 'Ibarra', 'Imbabura', 'Latacunga', 'Libertad', 'Loja', 'Machala', 'Manta', 'Puyo', 'Quevedo', 'Quito', 'Riobamba', 'Salinas', 'Santa Elena', 'Santo Domingo', 'Santo Domingo de los Tsachilas']
+train:
+  batch_size: 2
