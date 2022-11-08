@@ -1,8 +1,10 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project version="4">
   <component name="ChangeListManager">
-    <list default="true" id="0a429b1e-6cfb-45bf-a691-0c342fed5235" name="Changes" comment="搭建基本框架，完成数据的提取和部分切割">
-      <change afterPath="$PROJECT_DIR$/src/dataset/extra/.gitkeep" afterDir="false" />
+    <list default="true" id="0a429b1e-6cfb-45bf-a691-0c342fed5235" name="Changes" comment="调整框架">
+      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/pretreatment/dataload.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/pretreatment/dataload.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/pretreatment/datavisualize.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/pretreatment/datavisualize.py" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -113,7 +115,11 @@
       <workItem from="1667478435131" duration="1047000" />
       <workItem from="1667479483258" duration="285000" />
       <workItem from="1667479768699" duration="133000" />
-      <workItem from="1667479902881" duration="377000" />
+      <workItem from="1667479902881" duration="486000" />
+      <workItem from="1667700996161" duration="5750000" />
+      <workItem from="1667870845699" duration="335000" />
+      <workItem from="1667871962312" duration="1631000" />
+      <workItem from="1667895959076" duration="12608000" />
     </task>
     <task id="LOCAL-00001" summary="搭建基本框架，完成数据的提取和部分的切割">
       <created>1667477499844</created>
@@ -136,7 +142,14 @@
       <option name="project" value="LOCAL" />
       <updated>1667480007350</updated>
     </task>
-    <option name="localTasksCounter" value="4" />
+    <task id="LOCAL-00004" summary="调整框架">
+      <created>1667480330358</created>
+      <option name="number" value="00004" />
+      <option name="presentableId" value="LOCAL-00004" />
+      <option name="project" value="LOCAL" />
+      <updated>1667480330359</updated>
+    </task>
+    <option name="localTasksCounter" value="5" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
@@ -157,10 +170,11 @@
     <MESSAGE value="搭建基本框架，完成数据的提取和部分的切割" />
     <MESSAGE value="调整结构" />
     <MESSAGE value="搭建基本框架，完成数据的提取和部分切割" />
-    <option name="LAST_COMMIT_MESSAGE" value="搭建基本框架，完成数据的提取和部分切割" />
+    <MESSAGE value="调整框架" />
+    <option name="LAST_COMMIT_MESSAGE" value="调整框架" />
   </component>
   <component name="com.intellij.coverage.CoverageDataManagerImpl">
-    <SUITE FILE_PATH="coverage/StoreSales$run.coverage" NAME="run Coverage Results" MODIFIED="1667360137454" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
+    <SUITE FILE_PATH="coverage/StoreSales$run.coverage" NAME="run Coverage Results" MODIFIED="1667702155591" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
     <SUITE FILE_PATH="coverage/StoreSales$2_.coverage" NAME="2.数据画图展示 Coverage Results" MODIFIED="1667288611291" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/长短期记忆(LSTM)/LSTM实例/空气质量(多变量预测)" />
   </component>
 </project>

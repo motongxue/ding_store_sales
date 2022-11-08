@@ -1,6 +1,7 @@
 from pandas import DataFrame
 import numpy as np
 
+
 def show_columns(name: str, data: DataFrame):
     print(name, '\n', data.columns)
 
