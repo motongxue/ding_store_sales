@@ -1,6 +1,6 @@
 import pandas as pd
 import numpy as np
-from sklearn.preprocessing import OrdinalEncoder
+from sklearn.preprocessing import OrdinalEncoder, LabelEncoder
 
 
 def difference(dataset, interval=1):
@@ -26,6 +26,11 @@ def inverse_difference(last_ob, value):
     return value + last_ob
 
 
+def fixna(data: pd.DataFrame):
+    data.fillna(method='pad', inplace=True)
+    data.fillna(method='bfill', inplace=True)
+
+
 def data_mapping(data):
     object_cols = [cname for cname in data.columns
                    if data[cname].dtype == "object"
@@ -35,36 +40,72 @@ def data_mapping(data):
     return object_cols, data
 
 
-def reshape_holiday(holiday):
-    hld = np.array(holiday)
-    new_hld = np.empty([0, 8], order='C')
-
-    return pd.DataFrame(new_hld, columns=['date',
-                                          'city',
-                                          'Additional', 'Bridge', 'Event', 'Holiday', 'Transfer', 'Work Day'])
+def label_encoder(data: pd.DataFrame, columns: list):
+    le = LabelEncoder()
+    for col in columns:
+        data[col] = le.fit_transform(data[col])
 
 
 def format_data(train, transaction, holidays, oil, store, test):
-    holidays.rename(columns={'date': 'date',
-                             'type': 'Daily_holiday_type',
-                             'locale': 'Daily_holiday_locale',
-                             'locale_name': 'Daily_holiday_locale_name',
-                             'description': "Daily_holiday_description",
-                             'transferred': "Daily_holiday_transferred"},
-                    inplace=True)
-    store.rename(columns={'store_nbr': 'store_nbr',
-                          'city': 'stores_city',
-                          'state': 'store_state',
-                          'type': 'store_type',
-                          'cluster': 'store_cluster'},
-                 inplace=True)
-    transaction.rename(columns={'transactions': 'Daily_transactions'})
-    new_train = pd.merge(train, holidays, how='left', left_on='date', right_on='date')
-    new_test = pd.merge(test, holidays, how='left', left_on='date', right_on='date')
-    new_train = pd.merge(new_train, oil, how='left', left_on='date', right_on='date')
-    new_test = pd.merge(new_test, oil, how='left', left_on='date', right_on='date')
-    new_train = pd.merge(new_train, store, how='left', left_on='store_nbr', right_on='store_nbr')
-    new_test = pd.merge(new_test, store, how='left', left_on='store_nbr', right_on='store_nbr')
-    new_train = pd.merge(new_train, transaction, how='left', on=['date', 'store_nbr'])
-    new_test = pd.merge(new_test, transaction, how='left', on=['date', 'store_nbr'])
-    return new_train, new_test
+    # combine train data and test data
+    train_len = train.shape[0]
+    test.insert(loc=4, column='sales', value=0)
+    combine = train.append(test, ignore_index=True)
+
+    # 清理商店无用信息
+    valid_extra_store_inf = store.drop(axis=1, columns=['type', 'cluster'])
+
+    # 合并得到带有位置信息的训练集
+    data_state = pd.merge(combine, valid_extra_store_inf, how='left', left_on='store_nbr', right_on='store_nbr')
+
+    # 清理无效假日，删除无用数据
+    valid_holiday = holidays.drop(holidays[holidays['transferred']].index)
+    valid_holiday.drop(axis=1, columns=['locale', 'description', 'transferred'], inplace=True)
+
+    # 合并 带有位置信息的训练集 与 地区假日信息 为 标准训练集
+    valid_holiday.rename(columns={'locale_name': 'city', 'type': 'events'}, inplace=True)
+    format_datas = pd.merge(data_state, valid_holiday, how='left', left_on=['date', 'city'], right_on=['date', 'city'])
+    valid_holiday.rename(columns={'city': 'state'}, inplace=True)
+    format_datas = pd.merge(format_datas, valid_holiday, how='left', left_on=['date', 'state'],
+                            right_on=['date', 'state'])
+
+    # 处理标准训练集假期数据
+    event_nan = format_datas[format_datas['events_x'].isna()]
+    event_not_nan = format_datas[format_datas['events_x'].notna()]
+
+    # - 拼接假期数据
+    event_nan['events_x'].fillna(value='', inplace=True)
+    event_nan['events_y'].fillna(value='', inplace=True)
+    event_nan['events_x'] = event_nan['events_x'] + event_nan['events_y']
+    format_datas = pd.concat([event_nan, event_not_nan], axis=0).sort_index()
+    format_datas.drop(axis=1, columns=['city', 'state', 'events_y'], inplace=True)
+    format_datas.rename(columns={'events_x': 'events'}, inplace=True)
+
+    # 处理标准训练集无效数据
+    fixna(format_datas)
+    # format_datas.dropna(inplace=True)
+
+    # 拼接油价数据
+    fixna(oil)
+    format_datas = pd.merge(format_datas, oil, how='left', left_on='date', right_on='date')
+
+    # 数据编码
+    columns = ['family', 'events']
+    label_encoder(format_datas, columns)
+
+    # 返回标准训练集与预测数据集
+    return format_datas[0: train_len], format_datas[train_len:]
+
+
+
+
+
+
+
+    # format_datas['events'] = format_datas['events'].str.replace('', 'Nothing') # 替换空事件名称
+    # for index, row in format_datas.iterrows():
+    #     if isnan(row['events_x']):
+    #         if isnan(row['events_y']):
+    #             format_datas.iloc[index, -2] = 'Nothing'
+    #         else:
+    #             format_datas.iloc[index, -2] = row['events_y']
