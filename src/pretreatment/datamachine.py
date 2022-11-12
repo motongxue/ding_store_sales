@@ -46,17 +46,12 @@ def label_encoder(data: pd.DataFrame, columns: list):
         data[col] = le.fit_transform(data[col])
 
 
-def format_data(train, transaction, holidays, oil, store, test):
-    # combine train data and test data
-    train_len = train.shape[0]
-    test.insert(loc=4, column='sales', value=0)
-    combine = train.append(test, ignore_index=True)
-
+def format_data(dataset, transaction, holidays, oil, store):
     # 清理商店无用信息
     valid_extra_store_inf = store.drop(axis=1, columns=['type', 'cluster'])
 
     # 合并得到带有位置信息的训练集
-    data_state = pd.merge(combine, valid_extra_store_inf, how='left', left_on='store_nbr', right_on='store_nbr')
+    data_state = pd.merge(dataset, valid_extra_store_inf, how='left', left_on='store_nbr', right_on='store_nbr')
 
     # 清理无效假日，删除无用数据
     valid_holiday = holidays.drop(holidays[holidays['transferred']].index)
@@ -93,8 +88,8 @@ def format_data(train, transaction, holidays, oil, store, test):
     columns = ['family', 'events']
     label_encoder(format_datas, columns)
 
-    # 返回标准训练集与预测数据集
-    return format_datas[0: train_len], format_datas[train_len:]
+    # 返回标准dataset
+    return format_datas
 
 
 

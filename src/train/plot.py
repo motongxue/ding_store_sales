@@ -82,7 +82,7 @@ def plot_training(epoch, path_to_save, src, prediction, sensor_number, index_in,
     plt.close()
 
 
-def plot_training_3(epoch, path_to_save, src, sampled_src, prediction, sensor_number, index_in, index_tar):
+def plot_training_3(epoch, path_to_save, src, sampled_src, prediction, store_number):
 
     # idx_scr = index_in.tolist()[0]
     # idx_tar = index_tar.tolist()[0]
@@ -102,7 +102,7 @@ def plot_training_3(epoch, path_to_save, src, sampled_src, prediction, sensor_nu
     plt.plot(idx_sampled_src, sampled_src, 'o-.', color='red', label = 'sampled source', linewidth=1, markersize=10)
     plt.plot(idx_scr, src, 'o-.', color = 'blue', label = 'input sequence', linewidth=1)
     plt.plot(idx_pred, prediction, 'o-.', color = 'limegreen', label = 'prediction sequence', linewidth=1)
-    plt.title("Teaching Forcing from Sensor " + str(sensor_number[0]) + ", Epoch " + str(epoch))
+    plt.title("Teaching Forcing from Store " + str(store_number[0]) + ", Epoch " + str(epoch))
     plt.xlabel("Time Elapsed")
     plt.ylabel("Humidity (%)")
     plt.legend()

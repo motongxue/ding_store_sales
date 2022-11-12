@@ -45,7 +45,7 @@ def transformer(dataloader, EPOCH, k, path_to_save_model, path_to_save_loss, pat
 
         ## TRAIN -- TEACHER FORCING
         model.train()
-        for index_in, index_tar, _input, target, sensor_number in dataloader:
+        for _input, target, store_number in dataloader:
 
             # Shape of _input : [batch, input_length, feature]
             # Desired input for model: [input_length, batch, feature]
@@ -111,7 +111,7 @@ def transformer(dataloader, EPOCH, k, path_to_save_model, path_to_save_loss, pat
             prediction_humidity = scaler.inverse_transform(
                 prediction[:, :, 0].detach().cpu().numpy())  # torch.Size([35, 1, 7])
             plot_training_3(epoch, path_to_save_predictions, src_humidity, sampled_src_humidity, prediction_humidity,
-                            sensor_number, index_in, index_tar)
+                            store_number)
 
         train_loss /= len(dataloader)
         log_loss(train_loss, path_to_save_loss, train=True)
