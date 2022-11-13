@@ -6,7 +6,9 @@ load:
   locale: ['Local', 'National', 'Regional']
   city: ['Ambato', 'Cayambe', 'Cotopaxi', 'Cuenca', 'Ecuador', 'El Carmen', 'Esmeraldas', 'Guaranda', 'Guayaquil', 'Ibarra', 'Imbabura', 'Latacunga', 'Libertad', 'Loja', 'Machala', 'Manta', 'Puyo', 'Quevedo', 'Quito', 'Riobamba', 'Salinas', 'Santa Elena', 'Santo Domingo', 'Santo Domingo de los Tsachilas']
 train:
-  batch_size: 2
+  batch_size: 1
+  training_length: 55000
+  forecast_window: 500
 save:
   model_path: './src/save/model/'
   loss_path: './src/save/loss/'

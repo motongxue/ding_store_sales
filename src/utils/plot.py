@@ -1,5 +1,5 @@
 import matplotlib.pyplot as plt
-from helpers import EMA
+from src.utils.helpers import EMA
 from icecream import ic 
 import numpy as np
 import torch

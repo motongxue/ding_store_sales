@@ -4,20 +4,14 @@
 @DATE: 2022/11/11 下午3:43
 @AUTHOR: lxx
 """
-import torch
 
-from src.model.model import Transformer
-from torch.utils.data import DataLoader
-import torch
-import torch.nn as nn
 import logging
-import time  # debugging
-from plot import *
-from helpers import *
-from joblib import load
-from icecream import ic
-from torch.optim.lr_scheduler import ReduceLROnPlateau
 import math, random
+from src.utils.plot import *
+from src.utils.helpers import *
+from joblib import load
+from src.model.model import Transformer
+from src.utils.plot import plot_training_3
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(name)s %(message)s",
                     datefmt="[%Y-%m-%d %H:%M:%S]")
@@ -32,7 +26,7 @@ def transformer(dataloader, EPOCH, k, path_to_save_model, path_to_save_loss, pat
                 device):
     device = torch.device(device)
 
-    model = Transformer().double().to(device)
+    model = Transformer(feature_size=6, num_layers=3, dropout=0).double().to(device)
     optimizer = torch.optim.Adam(model.parameters())
     # scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer, mode='min', factor=0.1, patience=200)
     criterion = torch.nn.MSELoss()
@@ -71,15 +65,15 @@ def transformer(dataloader, EPOCH, k, path_to_save_model, path_to_save_loss, pat
                 # optimizer.step()
                 """
 
-                if i < 24:  # One day, enough data to make inferences about cycles
+                if i < 500:  # One day, enough data to make inferences about cycles
                     prob_true_val = True
                 else:
-                    ## coin flip
-                    v = k / (k + math.exp(
-                        epoch / k))  # probability of heads/tails depends on the epoch, evolves with time.
-                    prob_true_val = flip_from_probability(
-                        v)  # starts with over 95 % probability of true val for each flip in epoch 0.
-                    ## if using true value as new value
+                    # coin flip
+                    # probability of heads/tails depends on the epoch, evolves with time.
+                    v = k / (k + math.exp(epoch / k))
+                    # starts with over 95 % probability of true val for each flip in epoch 0.
+                    prob_true_val = flip_from_probability(v)
+                    # if using true value as new value
 
                 if prob_true_val:  # Using true value as next value
                     sampled_src = torch.cat((sampled_src.detach(), src[i + 1, :, :].unsqueeze(0).detach()))
@@ -102,7 +96,7 @@ def transformer(dataloader, EPOCH, k, path_to_save_model, path_to_save_loss, pat
             best_model = f"best_train_{epoch}.pth"
 
         if epoch % 10 == 0:  # Plot 1-Step Predictions
-
+            print(f"Epoch: {epoch}, Training loss: {train_loss}")
             logger.info(f"Epoch: {epoch}, Training loss: {train_loss}")
             scaler = load('scalar_item.joblib')
             sampled_src_humidity = scaler.inverse_transform(sampled_src[:, :, 0].cpu())  # torch.Size([35, 1, 7])
