@@ -1,6 +1,7 @@
 import pandas as pd
 import numpy as np
-from sklearn.preprocessing import OrdinalEncoder, LabelEncoder
+import torch
+from sklearn.preprocessing import OrdinalEncoder, LabelEncoder, MinMaxScaler
 
 
 def difference(dataset, interval=1):
@@ -26,9 +27,37 @@ def inverse_difference(last_ob, value):
     return value + last_ob
 
 
+# 将数据缩放到 [-1, 1]之间的数
+def scale(train):
+    # 创建一个缩放器
+    scaler = MinMaxScaler(feature_range=(-1, 1))
+    scaler = scaler.fit(train)
+    # 将train从二维数组的格式转化为一个23*2的张量
+    #train = train.reshape(train.shape[0], train.shape[1])
+    # 使用缩放器将数据缩放到[-1, 1]之间
+    train_scaled = scaler.transform(train)
+    return torch.Tensor(train_scaled)
+
+
+# 数据逆缩放，scaler是之前生成的缩放器，X是一维数组，y是数值
+def invert_scale(scaler, X, y):
+    # 将x，y转成一个list列表[x,y]->[0.26733207, -0.025524002]
+    # [y]可以将一个数值转化成一个单元素列表
+    new_row = [x for x in X] + [y]
+    #new_row = [X[0]]+[y]
+    # 将列表转化为一个,包含两个元素的一维数组，形状为(2,)->[0.26733207 -0.025524002]
+    array = np.array(new_row)
+    print(array.shape)
+    # 将一维数组重构成形状为(1,2)的，1行、每行2个元素的，2维数组->[[ 0.26733207 -0.025524002]]
+    array = array.reshape(1, len(array))
+    # 逆缩放输入的形状为(1,2),输出形状为(1,2) -> [[ 73 15]]
+    inverted = scaler.inverse_transform(array)
+    return inverted[0, -1]
+
+
 def fixna(data: pd.DataFrame):
     data.fillna(method='pad', inplace=True)
-    data.fillna(method='bfill', inplace=True)
+    data.fillna(method='backfill', inplace=True)
 
 
 def data_mapping(data):
@@ -83,6 +112,7 @@ def format_data(dataset, transaction, holidays, oil, store):
     # 拼接油价数据
     fixna(oil)
     format_datas = pd.merge(format_datas, oil, how='left', left_on='date', right_on='date')
+    fixna(format_datas)
 
     # 数据编码
     columns = ['family', 'events']

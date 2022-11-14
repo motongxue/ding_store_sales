@@ -17,7 +17,7 @@ Ashish Vaswani, Noam Shazeer, Niki Parmar, Jakob Uszkoreit, Llion Jones, Aidan N
 
 class Transformer(nn.Module):
     # d_model : number of features
-    def __init__(self, feature_size=6, num_layers=3, dropout=0):
+    def __init__(self, feature_size, num_layers=3, dropout=0.1):
         super(Transformer, self).__init__()
         # embed_dim一定可被num_heads整除
         self.encoder_layer = nn.TransformerEncoderLayer(d_model=feature_size, nhead=feature_size, dropout=dropout)

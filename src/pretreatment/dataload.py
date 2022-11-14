@@ -9,7 +9,7 @@ import torch
 import numpy as np
 import pandas as pd
 from joblib import dump
-from src.pretreatment.datamachine import format_data
+from src.pretreatment.datamachine import format_data, scale
 from easydict import EasyDict
 from torch.utils.data import Dataset, DataLoader
 from sklearn.preprocessing import MinMaxScaler
@@ -52,7 +52,7 @@ def data_load(config: EasyDict, is_train: bool):
 class SensorDataset(Dataset):
     """Face Landmarks dataset."""
 
-    def __init__(self, config: EasyDict, is_train: bool, training_length, forecast_window):
+    def __init__(self, config: EasyDict, is_train: bool):
         """
         Args:
             csv_file (string): Path to the csv file.
@@ -62,36 +62,22 @@ class SensorDataset(Dataset):
         # load raw data file
         self.dl = data_load(config, is_train)
         self.transform = MinMaxScaler()
-        # T与S分别表示用于测试与验证的数据长度，这会从数据最后部分向前截取
-        self.T = training_length
-        self.S = forecast_window
+        self.dl_input = self.dl[['store_nbr', 'family', 'onpromotion', 'events', 'dcoilwtico']]
+        self.dl_target = self.dl[['sales']]
+        self.length = config.train.training_length
 
     def __len__(self):
         # return number of store
-        return len(self.dl.groupby(by=["store_nbr"]))
+        return int(len(self.dl) / self.length) - 2
+        # return len(self.dl)
 
     # Will pull an index between 0 and __len__.
     def __getitem__(self, idx):
-        # Sensors are indexed from 1
-        idx = idx + 1
-        # np.random.seed(0)
-
-        start = np.random.randint(0, len(self.dl[self.dl["store_nbr"] == idx]) - self.T - self.S)
-        store_number = str(idx)
-        _input = torch.tensor(self.dl[self.dl["store_nbr"] == idx]
-                              .iloc[start: start + self.T, 2:].values)
-        target = torch.tensor(self.dl[self.dl["store_nbr"] == idx]
-                              .iloc[start + self.T: start + self.T + self.S, 2:].values)
-
-        # scalar is fit only to the input, to avoid the scaled values "leaking" information about the target range.
-        # scalar is fit only for humidity, as the timestamps are already scaled
-        # scalar input/output of shape: [n_samples, n_features].
-        scaler = self.transform
-
-        scaler.fit(_input[:, 0].unsqueeze(-1))
-        # _input[:, 0] = torch.tensor(scaler.transform(_input[:, 0].unsqueeze(-1)).squeeze(-1))
-        # target[:, 0] = torch.tensor(scaler.transform(target[:, 0].unsqueeze(-1)).squeeze(-1))
-
-        # save the scalar to be used later when inverse translating the data for plotting.
-        dump(scaler, 'scalar_item.joblib')
-        return _input, target, store_number
+        # _input = torch.tensor(self.dl_input.iloc[idx].values)
+        # # _input = _input.reshape([25])
+        # target = torch.tensor(self.dl_target.iloc[idx].values)
+        # return _input, target
+        _input = torch.tensor(self.dl_input.iloc[idx * self.length: (idx + 1) * self.length].values)  # [10, 5]
+        # _input = _input.reshape([25])
+        target = torch.tensor(self.dl_target.iloc[idx * self.length: (idx + 1) * self.length].values)  # [10, 1]
+        return scale(_input), scale(target)

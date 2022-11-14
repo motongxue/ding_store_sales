@@ -7,11 +7,17 @@
 
 import logging
 import math, random
-from src.utils.plot import *
-from src.utils.helpers import *
-from joblib import load
+
+import torch
+from easydict import EasyDict
+from torch import nn
+from torch.utils.data import DataLoader
+from src.model.LSTM import LstmRNN
+from src.model.TransAm import TransAm
 from src.model.model import Transformer
-from src.utils.plot import plot_training_3
+from src.pretreatment.datamachine import scale
+from src.utils.plot import *
+from tqdm.auto import tqdm
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(name)s %(message)s",
                     datefmt="[%Y-%m-%d %H:%M:%S]")
@@ -22,72 +28,52 @@ def flip_from_probability(p):
     return True if random.random() < p else False
 
 
-def transformer(dataloader, EPOCH, k, path_to_save_model, path_to_save_loss, path_to_save_predictions,
-                device):
-    device = torch.device(device)
+def train_epoch(config: EasyDict, model: nn.Module, dataloader: DataLoader, optimizer: torch.optim.Optimizer,
+                device, loss_function, step: int):
+    train_loss = 0
+    model.train()
+    train_bar = tqdm(dataloader)
+    train_bar.set_description(f'Epoch [{step + 1}/{config.train.epoch}] Training')
+    optimizer.param_groups[0]['lr'] = 0.0001
+    for _input, target in train_bar:
+        sampled_src = _input.float().to(device)
+        sampled_target = target.float().to(device)
+        prediction = model(sampled_src)
+        loss = loss_function(sampled_target, prediction)
 
-    model = Transformer(feature_size=6, num_layers=3, dropout=0).double().to(device)
+        loss.backward()
+        optimizer.step()
+        optimizer.zero_grad()
+        train_loss += loss.detach().item()
+        train_bar.set_postfix({'loss': f'{loss:1.5f}'})
+    return train_loss
+
+
+def val_epoch(model: nn.Module):
+    model.eval()
+
+
+def train(config: EasyDict, dataloader, path_to_save_model, path_to_save_loss, path_to_save_predictions,
+          device):
+    device = torch.device(device)
+    epoch = config.train.epoch
+    # model = LstmRNN(input_size=5, hidden_size=20, output_size=1, num_layers=10).double().to(device)
+    # model = Transformer(feature_size=tl * 5)
+    model = TransAm(feature_size=5).to(device)
     optimizer = torch.optim.Adam(model.parameters())
-    # scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer, mode='min', factor=0.1, patience=200)
     criterion = torch.nn.MSELoss()
+    # scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer, mode='min', factor=0.1, patience=200)
     best_model = ""
     min_train_loss = float('inf')
 
-    for epoch in range(EPOCH + 1):
-        train_loss = 0
-        val_loss = 0
-
-        ## TRAIN -- TEACHER FORCING
-        model.train()
-        for _input, target, store_number in dataloader:
-
-            # Shape of _input : [batch, input_length, feature]
-            # Desired input for model: [input_length, batch, feature]
-
-            optimizer.zero_grad()
-            src = _input.permute(1, 0, 2).double().to(device)[:-1, :, :]  # torch.Size([24, 1, 7])
-            target = _input.permute(1, 0, 2).double().to(device)[1:, :, :]  # src shifted by 1.
-            sampled_src = src[:1, :, :]  # t0 torch.Size([1, 1, 7])
-
-            for i in range(len(target) - 1):
-
-                prediction = model(sampled_src, device)  # torch.Size([1xw, 1, 1])
-                # for p1, p2 in zip(params, model.parameters()):
-                #     if p1.data.ne(p2.data).sum() > 0:
-                #         ic(False)
-                # ic(True)
-                # ic(i, sampled_src[:,:,0], prediction)
-                # time.sleep(1)
-                """
-                # to update model at every step
-                # loss = criterion(prediction, target[:i+1,:,:1])
-                # loss.backward()
-                # optimizer.step()
-                """
-
-                if i < 500:  # One day, enough data to make inferences about cycles
-                    prob_true_val = True
-                else:
-                    # coin flip
-                    # probability of heads/tails depends on the epoch, evolves with time.
-                    v = k / (k + math.exp(epoch / k))
-                    # starts with over 95 % probability of true val for each flip in epoch 0.
-                    prob_true_val = flip_from_probability(v)
-                    # if using true value as new value
-
-                if prob_true_val:  # Using true value as next value
-                    sampled_src = torch.cat((sampled_src.detach(), src[i + 1, :, :].unsqueeze(0).detach()))
-                else:  ## using prediction as new value
-                    positional_encodings_new_val = src[i + 1, :, 1:].unsqueeze(0)
-                    predicted_humidity = torch.cat((prediction[-1, :, :].unsqueeze(0), positional_encodings_new_val),
-                                                   dim=2)
-                    sampled_src = torch.cat((sampled_src.detach(), predicted_humidity.detach()))
-
-            """To update model after each sequence"""
-            loss = criterion(target[:-1, :, 0].unsqueeze(-1), prediction)
-            loss.backward()
-            optimizer.step()
-            train_loss += loss.detach().item()
+    for step in range(epoch + 1):
+        train_loss = train_epoch(config=config,
+                                 model=model,
+                                 dataloader=dataloader,
+                                 optimizer=optimizer,
+                                 device=device,
+                                 loss_function=criterion,
+                                 step=step)
 
         if train_loss < min_train_loss:
             torch.save(model.state_dict(), path_to_save_model + f"best_train_{epoch}.pth")
@@ -95,20 +81,22 @@ def transformer(dataloader, EPOCH, k, path_to_save_model, path_to_save_loss, pat
             min_train_loss = train_loss
             best_model = f"best_train_{epoch}.pth"
 
-        if epoch % 10 == 0:  # Plot 1-Step Predictions
-            print(f"Epoch: {epoch}, Training loss: {train_loss}")
-            logger.info(f"Epoch: {epoch}, Training loss: {train_loss}")
-            scaler = load('scalar_item.joblib')
-            sampled_src_humidity = scaler.inverse_transform(sampled_src[:, :, 0].cpu())  # torch.Size([35, 1, 7])
-            src_humidity = scaler.inverse_transform(src[:, :, 0].cpu())  # torch.Size([35, 1, 7])
-            target_humidity = scaler.inverse_transform(target[:, :, 0].cpu())  # torch.Size([35, 1, 7])
-            prediction_humidity = scaler.inverse_transform(
-                prediction[:, :, 0].detach().cpu().numpy())  # torch.Size([35, 1, 7])
-            plot_training_3(epoch, path_to_save_predictions, src_humidity, sampled_src_humidity, prediction_humidity,
-                            store_number)
-
-        train_loss /= len(dataloader)
-        log_loss(train_loss, path_to_save_loss, train=True)
-
+        if epoch % 5 == 0:
+            for p in optimizer.param_groups:  # 更新每个group里的参数lr
+                p['lr'] *= 0.9
+        # if epoch % 10 == 0:  # Plot 1-Step Predictions
+        #     print(f"Epoch: {epoch}, Training loss: {train_loss}")
+        #     logger.info(f"Epoch: {epoch}, Training loss: {train_loss}")
+        #     scaler = load('scalar_item.joblib')
+        #     sampled_src_humidity = scaler.inverse_transform(sampled_src[:, :, 0].cpu())  # torch.Size([35, 1, 7])
+        #     src_humidity = scaler.inverse_transform(src[:, :, 0].cpu())  # torch.Size([35, 1, 7])
+        #     target_humidity = scaler.inverse_transform(target[:, :, 0].cpu())  # torch.Size([35, 1, 7])
+        #     prediction_humidity = scaler.inverse_transform(
+        #         prediction[:, :, 0].detach().cpu().numpy())  # torch.Size([35, 1, 7])
+        #     plot_training_3(epoch, path_to_save_predictions, src_humidity, sampled_src_humidity, prediction_humidity,
+        #                     store_number)
+        #
+        # train_loss /= len(dataloader)
+        # log_loss(train_loss, path_to_save_loss, train=True)
     plot_loss(path_to_save_loss, train=True)
     return best_model
