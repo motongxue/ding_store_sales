@@ -3,8 +3,10 @@ load:
   test_path: './src/dataset/test/'
   extra_path: './src/dataset/extra/'
 train:
+  train_scale: 0.8
+  val_scale: 0.1
   epoch: 300
-  batch_size: 16
+  batch_size: 32
   training_length: 10
 save:
   model_path: './src/save/model/'

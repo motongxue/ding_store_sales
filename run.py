@@ -3,7 +3,7 @@ import torch
 import yaml
 from easydict import EasyDict
 from torch.utils.data import DataLoader
-from src.pretreatment.dataload import SensorDataset
+from src.pretreatment.dataload import StoreDataset, DataloaderType
 from src.train.train import train
 
 if __name__ == '__main__':
@@ -13,9 +13,11 @@ if __name__ == '__main__':
     # loading config file
     config = EasyDict(yaml.load(open(config_path, "r"), Loader=yaml.FullLoader))
     # loading datasets
-    train_dataset = SensorDataset(config=config,
-                                  is_train=True)
+    train_dataset = StoreDataset(config=config, data_type=DataloaderType.train)
     train_dataset_loader = DataLoader(train_dataset, batch_size=config.train.batch_size, shuffle=False)
+
+    val_dataset = StoreDataset(config=config, data_type=DataloaderType.validate)
+    val_dataset_loader = DataLoader(val_dataset, batch_size=config.train.batch_size, shuffle=False)
     # test_dataset = SensorDataset(config=config,
     #                              is_train=False,
     #                              training_length=config.train.training_length,
@@ -24,6 +26,7 @@ if __name__ == '__main__':
 
     model = train(config=config,
                   dataloader=train_dataset_loader,
+                  val_dataloader=val_dataset_loader,
                   path_to_save_model=config.save.model_path,
                   path_to_save_loss=config.save.loss_path,
                   path_to_save_predictions=config.save.predictions_path,
